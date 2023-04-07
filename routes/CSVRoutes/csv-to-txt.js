@@ -16,12 +16,15 @@ router.post("/", csvUpload.single("csvfile"), async (req, res, next) => {
       throw new InvalidFileTypeError("Invalid file type. Only CSV files are allowed.");
     }
 
-    const txtBuffer = await convertCsvToTxt(req.file.buffer);
+    const outputFile = await convertCsvToTxt(req.file.buffer);
     const filename = req.file.originalname.slice(0, -4);
+    const downloadLink = `${req.protocol}://${req.get("host")}/output/${path.basename(outputFile)}`;
 
-    res.setHeader("Content-Disposition", `attachment; filename=${filename}.txt`);
-    res.setHeader("Content-Type", "text/plain");
-    res.send(txtBuffer);
+    res.status(200).json({
+      success: true,
+      message: "File converted successfully.",
+      downloadLink: downloadLink,
+    });
   } catch (error) {
     next(error);
   }

@@ -2,6 +2,8 @@ const { simpleParser: parse } = require("mailparser");
 const validator = require("validator");
 const cheerio = require("cheerio");
 const pdf = require("html-pdf");
+const fs = require("fs");
+const path = require("path");
 
 const { ValidationError, FormattingError } = require("./customErrors");
 
@@ -16,7 +18,6 @@ async function parseEml(emlBuffer) {
     const content = mail.html || mail.textAsHtml || mail.text;
     let subject = mail.subject || "Email";
 
-    // Sanitize the subject
     subject = validator.escape(subject);
 
     return { content, subject };
@@ -29,10 +30,8 @@ function formatEmailContent(content) {
   try {
     const $ = cheerio.load(content);
 
-    // Apply a max-width to all images to fit the page
     $("img").css("max-width", "100%");
 
-    // Apply default styles to the body
     $("body").css({
       "font-family": "Arial, sans-serif",
       "font-size": "14px",
@@ -42,10 +41,8 @@ function formatEmailContent(content) {
       "padding": "0",
     });
 
-    // Apply basic styles to headers
     $("h1, h2, h3, h4, h5, h6").css("font-weight", "bold");
 
-    // Apply basic styles to links
     $("a").css({
       "color": "#1a0dab",
       "text-decoration": "none",
@@ -58,7 +55,6 @@ function formatEmailContent(content) {
       ${$.html()}
     </div>
   `;
-  
 
     return formattedContent;
   } catch (error) {
@@ -71,11 +67,16 @@ async function convertEmlToPdf(emlBuffer) {
   const formattedContent = formatEmailContent(content);
 
   return new Promise((resolve, reject) => {
-    pdf.create(formattedContent).toBuffer((err, buffer) => {
+    pdf.create(formattedContent).toBuffer(async (err, buffer) => {
       if (err) {
         reject(new Error("Error while converting EML to PDF: " + err.message));
       } else {
-        resolve(buffer);
+        const outputPath = path.join(__dirname, '..', '..', '..', 'output');
+        const outputFileName = `${subject}-${Date.now()}.pdf`;
+        const outputFile = path.join(outputPath, outputFileName);
+
+        await fs.promises.writeFile(outputFile, buffer);
+        resolve(outputFile);
       }
     });
   });

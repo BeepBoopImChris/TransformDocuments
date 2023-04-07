@@ -1,6 +1,8 @@
 const { parse } = require("papaparse");
 const PDFDocument = require("pdfkit");
 const { CsvParseError, PdfGenerationError } = require("./customErrors");
+const fs = require("fs");
+const path = require("path");
 
 async function convertCsvToPdf(csvBuffer) {
   try {
@@ -11,12 +13,13 @@ async function convertCsvToPdf(csvBuffer) {
       throw new CsvParseError("An error occurred while parsing the CSV file.");
     }
 
+    const outputPath = path.join(__dirname, '..', '..', '..', 'output');
+    const outputFilename = `output-${Date.now()}.pdf`;
+    const outputPathFile = path.join(outputPath, outputFilename);
     const doc = new PDFDocument({ margin: 40 });
-    let pdfBuffer = Buffer.alloc(0);
+    const writeStream = fs.createWriteStream(outputPathFile);
 
-    doc.on("data", (chunk) => {
-      pdfBuffer = Buffer.concat([pdfBuffer, chunk]);
-    });
+    doc.pipe(writeStream);
 
 
   const headerColumns = Object.keys(data[0]);
@@ -79,10 +82,10 @@ async function convertCsvToPdf(csvBuffer) {
   doc.end();
 
   return new Promise((resolve, reject) => {
-    doc.on("end", () => {
-      resolve(pdfBuffer);
+    writeStream.on("finish", () => {
+      resolve(outputPathFile);
     });
-    doc.on("error", (error) => {
+    writeStream.on("error", (error) => {
       reject(new PdfGenerationError("An error occurred during PDF generation."));
     });
   });

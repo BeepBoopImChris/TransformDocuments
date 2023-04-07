@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const csvUpload = require("../../middleware/csv-upload"); 
+const csvUpload = require("../../middleware/csv-upload");
 const { convertCsvToPdf } = require("../../transformers/CSVTransformers/csv-to-pdf/converter");
 const { FileNotFoundError, InvalidFileTypeError } = require("../../transformers/CSVTransformers/csv-to-pdf/customErrors");
 const path = require("path");
@@ -16,12 +16,15 @@ router.post("/", csvUpload.single("csvfile"), async (req, res, next) => {
       throw new InvalidFileTypeError("Invalid file type. Only CSV files are allowed.");
     }
 
-    const pdfBuffer = await convertCsvToPdf(req.file.buffer);
+    const outputFile = await convertCsvToPdf(req.file.buffer);
     const filename = req.file.originalname.slice(0, -4);
+    const downloadLink = `http://${req.headers.host}/output/${path.basename(outputFile)}`;
 
-    res.setHeader("Content-Disposition", `attachment; filename=${filename}.pdf`);
-    res.setHeader("Content-Type", "application/pdf");
-    res.send(pdfBuffer);
+    res.json({
+      success: true,
+      message: "File converted successfully.",
+      downloadLink,
+    });
   } catch (error) {
     next(error);
   }

@@ -1,7 +1,7 @@
 const multer = require("multer");
 
 const storage = multer.memoryStorage();
-const limits = { fileSize: 5 * 1024 * 1024 }; // Limit file size to 5 MB
+const limits = { fileSize: 5 * 1024 * 1024 }; 
 const fileFilter = (req, file, cb) => {
   if (file.mimetype === "message/rfc822") {
     cb(null, true);

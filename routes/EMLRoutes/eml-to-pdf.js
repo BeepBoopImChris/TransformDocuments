@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const emlUpload = require("../../middleware/eml-upload"); 
+const emlUpload = require("../../middleware/eml-upload");
 const { convertEmlToPdf } = require("../../transformers/EMLTransformers/eml-to-pdf/converter");
 const { FileNotFoundError, InvalidFileTypeError } = require("../../transformers/EMLTransformers/eml-to-pdf/customErrors");
 const path = require("path");
@@ -13,15 +13,17 @@ router.post("/", emlUpload.single("emlfile"), async (req, res, next) => {
 
     const fileExtension = path.extname(req.file.originalname).toLowerCase();
     if (fileExtension !== ".eml") {
-      throw new InvalidFileTypeError("Invalid file type. Only eml files are allowed.");
+      throw new InvalidFileTypeError("Invalid file type. Only EML files are allowed.");
     }
 
-    const pdfBuffer = await convertEmlToPdf(req.file.buffer); 
-    const filename = req.file.originalname.slice(0, -4);
+    const outputFile = await convertEmlToPdf(req.file.buffer);
+    const downloadLink = `${req.protocol}://${req.get("host")}/output/${path.basename(outputFile)}`;
 
-    res.setHeader("Content-Disposition", `attachment; filename=${filename}.pdf`);
-    res.setHeader("Content-Type", "application/pdf");
-    res.send(pdfBuffer);
+    res.status(200).json({
+      success: true,
+      message: "File converted successfully.",
+      downloadLink: downloadLink,
+    });
   } catch (error) {
     next(error);
   }
