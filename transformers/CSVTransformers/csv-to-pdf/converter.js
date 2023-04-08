@@ -13,91 +13,94 @@ async function convertCsvToPdf(csvBuffer) {
       throw new CsvParseError("An error occurred while parsing the CSV file.");
     }
 
+    // Define output path and filename
     const outputPath = path.join(__dirname, '..', '..', '..', 'output');
     const outputFilename = `output-${Date.now()}.pdf`;
     const outputPathFile = path.join(outputPath, outputFilename);
+    
+    // Create new PDF document and write stream to output file
     const doc = new PDFDocument({ margin: 40 });
     const writeStream = fs.createWriteStream(outputPathFile);
 
     doc.pipe(writeStream);
 
+    // Define table dimensions and positions
+    const headerColumns = Object.keys(data[0]);
+    const numberOfRows = data.length;
+    const columnWidth = (doc.page.width - 100) / headerColumns.length;
+    const rowHeight = 20;
 
-  const headerColumns = Object.keys(data[0]);
-  const numberOfRows = data.length;
-  const columnWidth = (doc.page.width - 100) / headerColumns.length;
-  const rowHeight = 20;
+    let yPosition = 100;
 
-  let yPosition = 100;
+    // Draw header background
+    doc.rect(40, 80, doc.page.width - 80, rowHeight)
+      .fill("#CCCCCC");
 
-  // Draw header background
-  doc.rect(40, 80, doc.page.width - 80, rowHeight)
-    .fill("#CCCCCC");
-
-  // Render table headers
-  let xPosition = 50;
-  for (let column of headerColumns) {
-    doc.fillColor("black")
-      .font("Helvetica-Bold")
-      .text(column, xPosition, yPosition);
-    xPosition += columnWidth;
-  }
-
-  // Render table rows
-  yPosition = 120;
-
-  for (let i = 0; i < numberOfRows; i++) {
-    xPosition = 50;
-
-    // Alternating row colors
-    if (i % 2 === 0) {
-      doc.rect(40, yPosition, doc.page.width - 80, rowHeight)
-        .fill("#F0F0F0");
-    }
-
+    // Render table headers
+    let xPosition = 50;
     for (let column of headerColumns) {
       doc.fillColor("black")
-        .font("Helvetica")
-        .text(String(data[i][column]), xPosition, yPosition + 4); // Slight vertical adjustment for better alignment
+        .font("Helvetica-Bold")
+        .text(column, xPosition, yPosition);
       xPosition += columnWidth;
     }
 
-    // Draw horizontal lines for table borders
-    doc.moveTo(40, yPosition)
-      .lineTo(doc.page.width - 40, yPosition)
-      .stroke();
+    // Render table rows
+    yPosition = 120;
 
-    yPosition += rowHeight;
-  }
+    for (let i = 0; i < numberOfRows; i++) {
+      xPosition = 50;
 
-  // Draw vertical lines for table borders
-  xPosition = 50;
-  for (let i = 0; i <= headerColumns.length; i++) {
-    doc.moveTo(xPosition, 80)
-      .lineTo(xPosition, yPosition)
-      .stroke();
+      // Alternating row colors
+      if (i % 2 === 0) {
+        doc.rect(40, yPosition, doc.page.width - 80, rowHeight)
+          .fill("#F0F0F0");
+      }
 
-    xPosition += columnWidth;
-  }
+      for (let column of headerColumns) {
+        doc.fillColor("black")
+          .font("Helvetica")
+          .text(String(data[i][column]), xPosition, yPosition + 4); // Slight vertical adjustment for better alignment
+        xPosition += columnWidth;
+      }
 
-  doc.end();
+      // Draw horizontal lines for table borders
+      doc.moveTo(40, yPosition)
+        .lineTo(doc.page.width - 40, yPosition)
+        .stroke();
 
-  return new Promise((resolve, reject) => {
-    writeStream.on("finish", () => {
-      resolve(outputPathFile);
+      yPosition += rowHeight;
+    }
+
+    // Draw vertical lines for table borders
+    xPosition = 50;
+    for (let i = 0; i <= headerColumns.length; i++) {
+      doc.moveTo(xPosition, 80)
+        .lineTo(xPosition, yPosition)
+        .stroke();
+
+      xPosition += columnWidth;
+    }
+
+    doc.end();
+
+    return new Promise((resolve, reject) => {
+      writeStream.on("finish", () => {
+        resolve(outputPathFile);
+      });
+      writeStream.on("error", (error) => {
+        reject(new PdfGenerationError("An error occurred during PDF generation."));
+      });
     });
-    writeStream.on("error", (error) => {
-      reject(new PdfGenerationError("An error occurred during PDF generation."));
-    });
-  });
-} catch (error) {
-  if (error instanceof CsvParseError || error instanceof PdfGenerationError) {
-    throw error;
-  } else {
-    throw new Error("An unexpected error occurred during the conversion process.");
+  } catch (error) {
+    if (error instanceof CsvParseError || error instanceof PdfGenerationError) {
+      throw error;
+    } else {
+      throw new Error("An unexpected error occurred during the conversion process.");
+    }
   }
-}
 }
 
 module.exports = {
-convertCsvToPdf,
+  convertCsvToPdf,
 };
