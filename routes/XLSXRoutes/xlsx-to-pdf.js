@@ -22,8 +22,11 @@ router.post("/", xlsxUpload.single("xlsxfile"), async (req, res, next) => {
       throw new InvalidFileTypeError("Invalid file type. Only XLSX files are allowed.");
     }
 
+    // Get font color from the request body
+    const fontColor = req.body.fontColor || '0,0,0';
+
     // Convert the XLSX to PDF and send the download link in the response
-    const pdfFilePath = await convertXlsxToPdf(req.file.buffer);
+    const pdfFilePath = await convertXlsxToPdf(req.file.buffer, fontColor);
     const fileName = path.basename(pdfFilePath);
 
     res.json({
